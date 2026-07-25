@@ -12,6 +12,7 @@ Why upload your sensitive documents to online cloud servers when you can crush t
 ## ✨ Why iCrushPDF?
 
 - 🔒 **100% On-Device & Private:** Powered locally by PyMuPDF engine—your private files never get sent over the internet.
+- 📦 **Native Drag & Drop:** Drop PDF files anywhere onto the application window or directly onto the app Dock/Finder icon to instantly open and prepare for compression.
 - 🎨 **Real-Time macOS Theme Sync:** Automatically detects and conforms to your system Accent Color (Pink, Green, Orange, Purple, etc.) and Dark/Light mode in real-time.
 - ⚡ **Asymptotic Progress UI:** Smooth, lively status feedback with intuitive visual state indicators and instant Finder reveal.
 - 🛠️ **Minimal Footprint:** Built natively for macOS Apple Silicon & Intel architectures.

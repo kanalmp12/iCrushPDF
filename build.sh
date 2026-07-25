@@ -11,7 +11,7 @@ fi
 source ../venv/bin/activate
 
 echo "Installing requirements..."
-pip install PyMuPDF customtkinter pyinstaller
+pip install PyMuPDF customtkinter pyinstaller tkinterdnd2
 
 echo "Building MacOS App Bundle with PyInstaller..."
 # We use --windowed to create a .app bundle without a console window
@@ -25,6 +25,7 @@ pyinstaller --noconfirm \
             --windowed \
             --name "iCrushPDF" \
             --icon="icon.icns" \
+            --collect-all tkinterdnd2 \
             --clean \
             compressor.py
 

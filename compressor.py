@@ -4,6 +4,8 @@ import fitz  # PyMuPDF
 import os
 import subprocess
 import multiprocessing
+from tkinterdnd2 import TkinterDnD, DND_FILES
+
 
 def get_macos_accent_color():
     try:
@@ -64,9 +66,13 @@ def compress_worker(input_path, output_path, level_str, queue):
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-class App(ctk.CTk):
+class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self):
         super().__init__()
+        try:
+            self.TkdndVersion = TkinterDnD._require(self)
+        except Exception as e:
+            print("TkinterDnD init error:", e)
 
         # configure window
         self.title("iCrushPDF")
@@ -95,11 +101,11 @@ class App(ctk.CTk):
         self.hover_color = get_macos_hover_color()
 
         # File selection button (Outlined for better contrast/less glare)
-        self.select_button = ctk.CTkButton(self.main_frame, text="📁 Select PDF File", command=self.select_file, height=40, font=ctk.CTkFont(size=14), fg_color="transparent", border_width=2, border_color=self.accent_color, text_color=self.accent_color, hover_color=("gray90", "gray20"))
+        self.select_button = ctk.CTkButton(self.main_frame, text="📁 Select or Drag PDF Here", command=self.select_file, height=40, font=ctk.CTkFont(size=14), fg_color="transparent", border_width=2, border_color=self.accent_color, text_color=self.accent_color, hover_color=("gray90", "gray20"))
         self.select_button.grid(row=1, column=0, padx=20, pady=10)
 
         # Selected file label
-        self.file_label = ctk.CTkLabel(self.main_frame, text="No file selected yet", font=ctk.CTkFont(size=12), text_color="gray")
+        self.file_label = ctk.CTkLabel(self.main_frame, text="Drop a PDF file anywhere on this window", font=ctk.CTkFont(size=12), text_color="gray")
         self.file_label.grid(row=2, column=0, padx=20, pady=(0, 10))
 
         # Compression level label
@@ -133,6 +139,20 @@ class App(ctk.CTk):
         # Start real-time monitoring of macOS Appearance Accent Color changes
         self.after(1500, self.monitor_macos_theme)
 
+        # Setup Drag & Drop support on window and widgets
+        try:
+            for widget in [self, self.main_frame, self.select_button, self.file_label]:
+                widget.drop_target_register(DND_FILES)
+                widget.dnd_bind('<<Drop>>', self.on_drop_files)
+        except Exception as e:
+            print("DnD setup error:", e)
+
+        # Native macOS Dock icon & Finder Open Document integration
+        try:
+            self.createcommand("::tk::mac::OpenDocument", self.on_mac_open_document)
+        except Exception:
+            pass
+
     def monitor_macos_theme(self):
         new_accent = get_macos_accent_color()
         new_hover = get_macos_hover_color()
@@ -155,23 +175,44 @@ class App(ctk.CTk):
                 
         self.after(1500, self.monitor_macos_theme)
 
+    def process_selected_file(self, file_path):
+        if not file_path or not file_path.lower().endswith(".pdf"):
+            self.file_label.configure(text="⚠️ Please drop a valid PDF file (.pdf)!", text_color="red")
+            return
+
+        self.selected_file_path = file_path
+        filename = os.path.basename(file_path)
+        if len(filename) > 40:
+            filename = filename[:37] + "..."
+        
+        try:
+            original_size = os.path.getsize(file_path) / (1024 * 1024)
+            self.file_label.configure(text=f"📄 {filename} ({original_size:.2f} MB) — Ready!", text_color=self.accent_color)
+            self.compress_button.configure(state="normal", text="🚀 Compress PDF Now", fg_color=self.accent_color, hover_color=self.hover_color, text_color=("white", "black"))
+            self.result_label.configure(text="")
+            self.reveal_button.grid_remove()
+        except Exception as e:
+            self.file_label.configure(text=f"⚠️ Error reading file size: {e}", text_color="red")
+
     def select_file(self):
         file_path = filedialog.askopenfilename(
             title="Select a PDF",
             filetypes=[("PDF files", "*.pdf")]
         )
         if file_path:
-            self.selected_file_path = file_path
-            filename = os.path.basename(file_path)
-            # Truncate filename if too long
-            if len(filename) > 40:
-                filename = filename[:37] + "..."
-            
-            original_size = os.path.getsize(file_path) / (1024 * 1024)
-            self.file_label.configure(text=f"📄 {filename} ({original_size:.2f} MB) — Ready!", text_color=self.accent_color)
-            self.compress_button.configure(state="normal", text="🚀 Compress PDF Now", fg_color=self.accent_color, hover_color=self.hover_color, text_color=("white", "black"))
-            self.result_label.configure(text="")
-            self.reveal_button.grid_remove()
+            self.process_selected_file(file_path)
+
+    def on_drop_files(self, event):
+        try:
+            files = self.tk.splitlist(event.data)
+            if files:
+                self.process_selected_file(files[0])
+        except Exception as e:
+            print("Drop event parsing error:", e)
+
+    def on_mac_open_document(self, *args):
+        if args:
+            self.process_selected_file(args[0])
 
     def compress_pdf(self):
         if not self.selected_file_path:
