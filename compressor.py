@@ -76,7 +76,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
         # configure window
         self.title("iCrushPDF")
-        self.geometry(f"{500}x{420}")
+        self.geometry(f"{500}x{440}")
         self.resizable(False, False)
 
         # state variables
@@ -135,6 +135,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.reveal_button = ctk.CTkButton(self.main_frame, text="📂 Reveal in Finder", command=self.reveal_in_finder, fg_color="transparent", border_width=1, text_color=("gray10", "#DCE4EE"), height=30)
         self.reveal_button.grid(row=8, column=0, padx=20, pady=(0, 10))
         self.reveal_button.grid_remove()
+
+        # Footer / Version label
+        self.version_label = ctk.CTkLabel(self.main_frame, text="v1.1.0 • 100% On-Device & Private 🔒", font=ctk.CTkFont(size=11), text_color="gray50")
+        self.version_label.grid(row=9, column=0, padx=20, pady=(5, 10))
 
         # Start real-time monitoring of macOS Appearance Accent Color changes
         self.after(1500, self.monitor_macos_theme)

@@ -29,4 +29,13 @@ pyinstaller --noconfirm \
             --clean \
             compressor.py
 
-echo "Build complete! The app is located in the 'dist' folder."
+APP_VERSION="1.1.0"
+echo "Injecting native macOS Info.plist metadata (Version $APP_VERSION)..."
+plutil -replace CFBundleShortVersionString -string "$APP_VERSION" dist/iCrushPDF.app/Contents/Info.plist
+plutil -replace CFBundleVersion -string "$APP_VERSION" dist/iCrushPDF.app/Contents/Info.plist
+plutil -replace CFBundleIdentifier -string "com.icrushpdf.app" dist/iCrushPDF.app/Contents/Info.plist
+plutil -replace CFBundleName -string "iCrushPDF" dist/iCrushPDF.app/Contents/Info.plist
+plutil -replace CFBundleDisplayName -string "iCrushPDF" dist/iCrushPDF.app/Contents/Info.plist
+plutil -replace NSHumanReadableCopyright -string "Copyright © 2026 iCrushPDF. All rights reserved." dist/iCrushPDF.app/Contents/Info.plist
+
+echo "Build complete! The app is located in the 'dist' folder with version $APP_VERSION."
