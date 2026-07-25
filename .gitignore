@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# PyInstaller & Build output
+build/
+dist/
+*.spec
+.pyinstaller_cache/
+*.zip
+
+# OS Generated Files
+.DS_Store
+*.swp
+*.swo
