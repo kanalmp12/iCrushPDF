@@ -20,12 +20,25 @@ Why upload your sensitive documents to online cloud servers when you can crush t
 
 ## 🚀 Installation via Homebrew (Recommended)
 
-You can easily install **iCrushPDF** using Homebrew once released:
+You can easily install **iCrushPDF** on your Mac via two simple methods:
+
+### Method 1: Tap & Install (Shorthand Command)
+Add our custom repository to your Homebrew tap, trust it, and install in seconds:
 
 ```bash
-# If hosted on a custom tap or local formula:
-brew install --cask --no-quarantine ./icrushpdf.rb
+brew tap kanalmp12/icrushpdf https://github.com/kanalmp12/iCrushPDF.git
+brew trust kanalmp12/icrushpdf
+brew install --cask icrushpdf
 ```
+
+### Method 2: Direct URL Install (One-Liner)
+Or simply install directly from our formula URL without setting up a tap:
+
+```bash
+brew install --cask https://raw.githubusercontent.com/kanalmp12/iCrushPDF/main/icrushpdf.rb
+```
+
+> 💡 **Note:** The installation formula automatically removes macOS Gatekeeper download restrictions (`xattr -cr`) after installation, allowing you to launch **iCrushPDF** immediately without any pop-up warnings!
 
 ---
 
