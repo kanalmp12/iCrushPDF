@@ -77,7 +77,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         # configure window
         self.title("iCrushPDF")
         self.geometry(f"{500}x{440}")
-        self.resizable(False, False)
+        self.resizable(False, True)
 
         # state variables
         self.selected_file_path = None
@@ -157,6 +157,14 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         except Exception:
             pass
 
+        # Perform initial dynamic sizing to fit content perfectly
+        self.adjust_window_size()
+
+    def adjust_window_size(self):
+        self.update_idletasks()
+        target_height = max(380, self.main_frame.winfo_reqheight() + 50)
+        self.geometry(f"500x{target_height}")
+
     def monitor_macos_theme(self):
         new_accent = get_macos_accent_color()
         new_hover = get_macos_hover_color()
@@ -195,8 +203,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.compress_button.configure(state="normal", text="🚀 Compress PDF Now", fg_color=self.accent_color, hover_color=self.hover_color, text_color=("white", "black"))
             self.result_label.configure(text="")
             self.reveal_button.grid_remove()
+            self.adjust_window_size()
         except Exception as e:
             self.file_label.configure(text=f"⚠️ Error reading file size: {e}", text_color="red")
+            self.adjust_window_size()
 
     def select_file(self):
         file_path = filedialog.askopenfilename(
@@ -241,7 +251,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.progress_bar.set(0)
         self.current_progress = 0.0
         self.progress_bar.grid()
-        self.update_idletasks()  # Force Tkinter to render the progress bar immediately
+        self.adjust_window_size()  # Automatically resize and render progress bar immediately
 
         # Run compression in a separate PROCESS so PyMuPDF does not block the UI (GIL freeze)
         self.queue = multiprocessing.Queue()
@@ -266,6 +276,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                 error_msg = status[7:]
                 self.result_label.configure(text=f"❌ Error: {error_msg}", text_color="#FF3B30")
                 self.compress_button.configure(state="normal", text="🔄 Try Again", fg_color=self.accent_color, hover_color=self.hover_color, text_color=("white", "black"))
+                self.adjust_window_size()
         else:
             if self.process.is_alive():
                 # Asymptotic progress bar (Zeno's progress bar)
@@ -278,6 +289,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                 self.progress_bar.grid_remove()
                 self.result_label.configure(text="❌ Error: Compression process terminated abruptly.", text_color="#FF3B30")
                 self.compress_button.configure(state="normal", text="🔄 Try Again", fg_color=self.accent_color, hover_color=self.hover_color, text_color=("white", "black"))
+                self.adjust_window_size()
 
     def _show_success(self, original_size):
         self.progress_bar.grid_remove()
@@ -291,6 +303,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.reveal_button.grid()
         self.compress_button.configure(state="normal", text="✨ Compress Again", fg_color=self.accent_color, hover_color=self.hover_color, text_color=("white", "black"))
         self.file_label.configure(text=f"✅ Done! Select another file or change level.", text_color="gray")
+        self.adjust_window_size()
 
     def reveal_in_finder(self):
         if self.compressed_file_path and os.path.exists(self.compressed_file_path):

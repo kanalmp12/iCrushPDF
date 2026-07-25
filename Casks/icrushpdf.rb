@@ -1,6 +1,6 @@
 cask "icrushpdf" do
   version "1.1.0"
-  sha256 "b47c7401a8ac884992eb015120dfc923a08e012b153934c846f7c8687dff8979"
+  sha256 "52c32c45df55fd9e6ab546c4062dff70373ea4a4283d6423a2725a61d572b4c6"
 
   # Download URL pointing to GitHub releases
   url "https://github.com/kanalmp12/iCrushPDF/releases/download/v#{version}/iCrushPDF-v#{version}.zip"
