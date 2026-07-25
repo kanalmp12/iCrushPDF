@@ -36,7 +36,7 @@ brew install --cask icrushpdf
 Or simply install directly from our formula URL without setting up a tap:
 
 ```bash
-brew install --cask https://raw.githubusercontent.com/kanalmp12/iCrushPDF/main/icrushpdf.rb
+brew install --cask https://raw.githubusercontent.com/kanalmp12/iCrushPDF/main/Casks/icrushpdf.rb
 ```
 
 > 💡 **Note:** The installation formula automatically removes macOS Gatekeeper download restrictions (`xattr -cr`) after installation, allowing you to launch **iCrushPDF** immediately without any pop-up warnings!
