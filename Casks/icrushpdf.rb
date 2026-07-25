@@ -8,7 +8,7 @@ cask "icrushpdf" do
   desc "Lightning-fast, private, on-device macOS PDF compressor app"
   homepage "https://github.com/kanalmp12/iCrushPDF"
 
-  depends_on macos: ">= :monterey"
+  depends_on macos: :monterey
 
   app "iCrushPDF.app"
 
