@@ -137,7 +137,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.reveal_button.grid_remove()
 
         # Footer / Version label
-        self.version_label = ctk.CTkLabel(self.main_frame, text="v1.1.0 • 100% On-Device & Private 🔒", font=ctk.CTkFont(size=11), text_color="gray50")
+        self.version_label = ctk.CTkLabel(self.main_frame, text="v1.1.1 • 100% On-Device & Private 🔒", font=ctk.CTkFont(size=11), text_color="gray50")
         self.version_label.grid(row=9, column=0, padx=20, pady=(5, 10))
 
         # Start real-time monitoring of macOS Appearance Accent Color changes
