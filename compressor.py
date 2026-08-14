@@ -235,12 +235,18 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         level_str = self.compression_level.get()
         original_size = os.path.getsize(self.selected_file_path)
 
-        # Define output path
+        # Define output path (auto-increment counter if file already exists)
         dir_name = os.path.dirname(self.selected_file_path)
         base_name = os.path.basename(self.selected_file_path)
         name, ext = os.path.splitext(base_name)
         
-        self.compressed_file_path = os.path.join(dir_name, f"{name}_compressed{ext}")
+        target_path = os.path.join(dir_name, f"{name}_compressed{ext}")
+        counter = 1
+        while os.path.exists(target_path):
+            target_path = os.path.join(dir_name, f"{name}_compressed_{counter}{ext}")
+            counter += 1
+
+        self.compressed_file_path = target_path
 
         # Update UI state to disabled neutral gray while compressing
         self.compress_button.configure(state="disabled", text="⏳ Compressing... Please Wait", fg_color=("gray85", "#2D2D30"), text_color_disabled=("gray45", "gray70"))
@@ -299,7 +305,17 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         savings = (1 - (new_size / original_size)) * 100
         if savings < 0:
             savings = 0
-        self.result_label.configure(text=f"🎉 Success! Reduced from {orig_mb:.2f} MB to {new_mb:.2f} MB (-{savings:.1f}%)", text_color=self.accent_color)
+            
+        out_filename = os.path.basename(self.compressed_file_path)
+        if len(out_filename) > 35:
+            out_display = out_filename[:32] + "..."
+        else:
+            out_display = out_filename
+
+        self.result_label.configure(
+            text=f"🎉 Success! Reduced from {orig_mb:.2f} MB to {new_mb:.2f} MB (-{savings:.1f}%)\n📄 Output: {out_display}",
+            text_color=self.accent_color
+        )
         self.reveal_button.grid()
         self.compress_button.configure(state="normal", text="✨ Compress Again", fg_color=self.accent_color, hover_color=self.hover_color, text_color=("white", "black"))
         self.file_label.configure(text=f"✅ Done! Select another file or change level.", text_color="gray")
