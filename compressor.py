@@ -6,8 +6,30 @@ import subprocess
 import multiprocessing
 import uuid
 import time
+import json
 from dataclasses import dataclass
 from tkinterdnd2 import TkinterDnD, DND_FILES
+
+APP_VERSION = "1.2.0"
+CONFIG_FILE = os.path.expanduser("~/.icrushpdf_config.json")
+
+
+def load_user_config():
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def save_user_config(config_dict):
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(config_dict, f)
+    except Exception:
+        pass
 
 
 def get_macos_accent_color():
@@ -226,6 +248,80 @@ class QueueItemRow(ctk.CTkFrame):
             self._spinner_after_id = None
 
 
+class ChangelogModal(ctk.CTkToplevel):
+    def __init__(self, parent, accent_color, hover_color):
+        super().__init__(parent)
+        self.title("What's New in iCrushPDF")
+        self.geometry("480x470")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        # Center modal relative to parent window
+        self.update_idletasks()
+        try:
+            px = parent.winfo_x() + (parent.winfo_width() - 480) // 2
+            py = parent.winfo_y() + (parent.winfo_height() - 470) // 2
+            self.geometry(f"+{max(0, px)}+{max(0, py)}")
+        except Exception:
+            pass
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+
+        # Header Frame
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="ew")
+        header.grid_columnconfigure(0, weight=1)
+
+        title = ctk.CTkLabel(header, text=f"🎉 What's New in v{APP_VERSION}", font=ctk.CTkFont(size=20, weight="bold"))
+        title.grid(row=0, column=0, sticky="w")
+
+        subtitle = ctk.CTkLabel(header, text="Here is what's new and improved in this update:", font=ctk.CTkFont(size=12), text_color="gray60")
+        subtitle.grid(row=1, column=0, sticky="w", pady=(2, 0))
+
+        # Content Frame with feature cards
+        content_frame = ctk.CTkScrollableFrame(self, corner_radius=10, fg_color=("gray92", "#242427"))
+        content_frame.grid(row=1, column=0, padx=20, pady=5, sticky="nsew")
+        content_frame.grid_columnconfigure(0, weight=1)
+
+        features = [
+            ("🗂️ Multi-File Batch Queue", "Add multiple PDF documents at once via file picker or drag & drop. Compress entire collections with a single click."),
+            ("⚙️ Per-Item Compression Levels", "Configure Low, Medium, or High compression levels independently for each document in your queue."),
+            ("⚡ Real-Time Progress & ETA", "Lively, smooth progress animation with live remaining time estimates as your files process."),
+            ("📂 Smart Output Destinations", "Save files to their original folder or choose a custom global destination, complete with automatic name collision avoidance."),
+            ("🔔 Completion Sound & Banner", "Subtle macOS native sound and notification alerts when your batch finishes in the background."),
+            ("🔒 100% Private & Local", "Every document is processed entirely on your Mac with PyMuPDF—no clouds, no tracking, complete privacy.")
+        ]
+
+        for feat_title, feat_desc in features:
+            card = ctk.CTkFrame(content_frame, fg_color="transparent")
+            card.pack(fill="x", padx=6, pady=6)
+            
+            t_lbl = ctk.CTkLabel(card, text=feat_title, font=ctk.CTkFont(size=13, weight="bold"), anchor="w")
+            t_lbl.pack(fill="x")
+            
+            d_lbl = ctk.CTkLabel(card, text=feat_desc, font=ctk.CTkFont(size=11), text_color=("gray30", "gray70"), wraplength=390, justify="left", anchor="w")
+            d_lbl.pack(fill="x", pady=(2, 0))
+
+        # Footer Dismiss Button
+        footer = ctk.CTkFrame(self, fg_color="transparent")
+        footer.grid(row=2, column=0, padx=20, pady=16, sticky="ew")
+        footer.grid_columnconfigure(0, weight=1)
+
+        dismiss_btn = ctk.CTkButton(
+            footer,
+            text="Got it! Let's Crush Some PDFs 🚀",
+            height=38,
+            command=self.destroy,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color=accent_color,
+            hover_color=hover_color,
+            text_color=("white", "black")
+        )
+        dismiss_btn.grid(row=0, column=0, sticky="ew")
+
+
 # Set appearance mode and color theme
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -425,14 +521,18 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         )
         self.cancel_button.grid(row=0, column=1, sticky="ew")
 
-        # Row 8: Version Footer
-        self.version_label = ctk.CTkLabel(
+        # Row 8: Version Footer (Clickable to view Changelog modal)
+        self.version_btn = ctk.CTkButton(
             self.main_frame,
-            text="v1.2.0 • 100% On-Device & Private 🔒",
+            text=f"v{APP_VERSION} (What's New) • 100% On-Device & Private 🔒",
+            command=lambda: self.check_and_show_changelog(force=True),
             font=ctk.CTkFont(size=11),
-            text_color="gray50"
+            fg_color="transparent",
+            hover_color=("gray90", "#2D2D30"),
+            text_color=("gray50", "gray60"),
+            height=22
         )
-        self.version_label.grid(row=8, column=0, padx=20, pady=(4, 10))
+        self.version_btn.grid(row=8, column=0, padx=20, pady=(4, 10))
 
         # Start Real-Time macOS Appearance Monitoring
         self.after(1500, self.monitor_macos_theme)
@@ -450,6 +550,17 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.createcommand("::tk::mac::OpenDocument", self.on_mac_open_document)
         except Exception:
             pass
+
+        # Check first launch for current version and show Changelog popup
+        self.after(400, self.check_and_show_changelog)
+
+    def check_and_show_changelog(self, force=False):
+        config = load_user_config()
+        last_version = config.get("last_seen_changelog_version", "")
+        if force or last_version != APP_VERSION:
+            ChangelogModal(self, self.accent_color, self.hover_color)
+            config["last_seen_changelog_version"] = APP_VERSION
+            save_user_config(config)
 
     def monitor_macos_theme(self):
         new_accent = get_macos_accent_color()
