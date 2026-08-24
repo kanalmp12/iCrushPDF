@@ -345,6 +345,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.queue_items: list[QueueItem] = []
         self.row_widgets: dict[str, QueueItemRow] = {}
         self.global_output_folder: str | None = None
+        self.default_compression_level = ctk.StringVar(value="Medium")
         self._is_running: bool = False
         self._current_process: multiprocessing.Process | None = None
         self._current_queue: multiprocessing.Queue | None = None
@@ -366,7 +367,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.main_frame = ctk.CTkFrame(self, corner_radius=15)
         self.main_frame.grid(row=0, column=0, padx=16, pady=16, sticky="nsew")
         self.main_frame.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_rowconfigure(4, weight=1) # Scrollable area expands
+        self.main_frame.grid_rowconfigure(5, weight=1) # Scrollable area expands
 
         # Row 0: App Title
         self.title_label = ctk.CTkLabel(self.main_frame, text="💘 iCrushPDF", font=ctk.CTkFont(size=24, weight="bold"))
@@ -408,7 +409,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
         # Row 2: Output Destination Bar
         self.output_bar_frame = ctk.CTkFrame(self.main_frame, corner_radius=8, fg_color=("gray90", "#242427"))
-        self.output_bar_frame.grid(row=2, column=0, padx=20, pady=(8, 4), sticky="ew")
+        self.output_bar_frame.grid(row=2, column=0, padx=20, pady=(6, 3), sticky="ew")
         self.output_bar_frame.grid_columnconfigure(0, weight=1)
 
         self.output_label = ctk.CTkLabel(
@@ -448,7 +449,33 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         )
         self.reset_output_btn.grid(row=0, column=2, padx=(2, 8), pady=6)
 
-        # Row 3: Warning / Notice Banner (Hidden initially)
+        # Row 3: Global Compression Level Segmented Bar
+        self.level_bar_frame = ctk.CTkFrame(self.main_frame, corner_radius=8, fg_color=("gray90", "#242427"))
+        self.level_bar_frame.grid(row=3, column=0, padx=20, pady=(3, 4), sticky="ew")
+        self.level_bar_frame.grid_columnconfigure(0, weight=1)
+
+        self.global_level_label = ctk.CTkLabel(
+            self.level_bar_frame,
+            text="⚡ Default Compression Level:",
+            font=ctk.CTkFont(size=12),
+            text_color=("gray30", "gray70"),
+            anchor="w"
+        )
+        self.global_level_label.grid(row=0, column=0, padx=12, pady=6, sticky="w")
+
+        self.global_level_control = ctk.CTkSegmentedButton(
+            self.level_bar_frame,
+            values=["Low", "Medium", "High"],
+            variable=self.default_compression_level,
+            command=self._on_global_level_changed,
+            selected_color=self.accent_color,
+            selected_hover_color=self.hover_color,
+            height=26,
+            font=ctk.CTkFont(size=11, weight="bold")
+        )
+        self.global_level_control.grid(row=0, column=1, padx=(4, 8), pady=6, sticky="e")
+
+        # Row 4: Warning / Notice Banner (Hidden initially)
         self.warning_label = ctk.CTkLabel(
             self.main_frame,
             text="",
@@ -456,12 +483,12 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             text_color="#FF9500",
             wraplength=520
         )
-        self.warning_label.grid(row=3, column=0, padx=20, pady=2)
+        self.warning_label.grid(row=4, column=0, padx=20, pady=2)
         self.warning_label.grid_remove()
 
-        # Row 4: Queue Scrollable Frame
+        # Row 5: Queue Scrollable Frame
         self.queue_frame = ctk.CTkScrollableFrame(self.main_frame, corner_radius=10, fg_color=("gray96", "#1E1E20"))
-        self.queue_frame.grid(row=4, column=0, padx=20, pady=(6, 8), sticky="nsew")
+        self.queue_frame.grid(row=5, column=0, padx=20, pady=(4, 6), sticky="nsew")
         self.queue_frame.grid_columnconfigure(0, weight=1)
 
         # Empty state placeholder label
@@ -474,23 +501,23 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         )
         self.empty_label.pack(pady=60)
 
-        # Row 5: Overall Progress Bar
+        # Row 6: Overall Progress Bar
         self.progress_bar = ctk.CTkProgressBar(self.main_frame, mode="determinate", progress_color=self.accent_color)
-        self.progress_bar.grid(row=5, column=0, padx=20, pady=(4, 2), sticky="ew")
+        self.progress_bar.grid(row=6, column=0, padx=20, pady=(4, 2), sticky="ew")
         self.progress_bar.set(0)
 
-        # Row 6: Overall Status & ETA Label
+        # Row 7: Overall Status & ETA Label
         self.overall_status_label = ctk.CTkLabel(
             self.main_frame,
             text="Queue is empty",
             font=ctk.CTkFont(size=12),
             text_color="gray50"
         )
-        self.overall_status_label.grid(row=6, column=0, padx=20, pady=(2, 6))
+        self.overall_status_label.grid(row=7, column=0, padx=20, pady=(2, 6))
 
-        # Row 7: Action Controls (Compress All, Cancel)
+        # Row 8: Action Controls (Compress All, Cancel)
         self.action_controls_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.action_controls_frame.grid(row=7, column=0, padx=20, pady=(4, 8), sticky="ew")
+        self.action_controls_frame.grid(row=8, column=0, padx=20, pady=(4, 8), sticky="ew")
         self.action_controls_frame.grid_columnconfigure(0, weight=3)
         self.action_controls_frame.grid_columnconfigure(1, weight=1)
 
@@ -521,7 +548,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         )
         self.cancel_button.grid(row=0, column=1, sticky="ew")
 
-        # Row 8: Version Footer (Clickable to view Changelog modal)
+        # Row 9: Version Footer (Clickable to view Changelog modal)
         self.version_btn = ctk.CTkButton(
             self.main_frame,
             text=f"v{APP_VERSION} (What's New) • 100% On-Device & Private 🔒",
@@ -532,7 +559,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             text_color=("gray50", "gray60"),
             height=22
         )
-        self.version_btn.grid(row=8, column=0, padx=20, pady=(4, 10))
+        self.version_btn.grid(row=9, column=0, padx=20, pady=(4, 10))
 
         # Start Real-Time macOS Appearance Monitoring
         self.after(1500, self.monitor_macos_theme)
@@ -562,6 +589,14 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             config["last_seen_changelog_version"] = APP_VERSION
             save_user_config(config)
 
+    def _on_global_level_changed(self, choice):
+        # Update any currently pending items in the queue
+        for item in self.queue_items:
+            if item.status == "pending":
+                item.level = choice
+                if item.id in self.row_widgets:
+                    self.row_widgets[item.id].level_var.set(choice)
+
     def monitor_macos_theme(self):
         new_accent = get_macos_accent_color()
         new_hover = get_macos_hover_color()
@@ -571,6 +606,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
             self.add_button.configure(border_color=self.accent_color, text_color=self.accent_color)
             self.progress_bar.configure(progress_color=self.accent_color)
+            self.global_level_control.configure(selected_color=self.accent_color, selected_hover_color=self.hover_color)
             if self.compress_all_button.cget("state") == "normal":
                 self.compress_all_button.configure(fg_color=self.accent_color, hover_color=self.hover_color)
 
@@ -640,7 +676,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                 id=str(uuid.uuid4()),
                 input_path=p,
                 output_folder=self.global_output_folder if self.global_output_folder else "",
-                level="Medium",
+                level=self.default_compression_level.get(),
                 status="pending",
                 original_size=size
             )
