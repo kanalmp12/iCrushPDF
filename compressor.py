@@ -4,6 +4,7 @@ import fitz  # PyMuPDF
 import os
 import subprocess
 import multiprocessing
+import threading
 import uuid
 import time
 import json
@@ -995,22 +996,15 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         if errors > 0:
             msg += f", {errors} error(s)"
 
-        script = f'''
-        try
-            tell application id "com.icrushpdf.app" to display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"
-        on error
-            try
-                tell application "iCrushPDF" to display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"
-            on error
-                display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"
-            end try
-        end try
-        '''
+        script = f'display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"'
 
-        try:
-            subprocess.run(["osascript", "-e", script], check=False)
-        except Exception as e:
-            print("Notification error:", e)
+        def _async_notify():
+            try:
+                subprocess.run(["osascript", "-e", script], capture_output=True, timeout=5)
+            except Exception as e:
+                print("Notification error:", e)
+
+        threading.Thread(target=_async_notify, daemon=True).start()
 
 
 if __name__ == "__main__":
