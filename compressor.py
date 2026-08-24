@@ -253,6 +253,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self._current_process: multiprocessing.Process | None = None
         self._current_queue: multiprocessing.Queue | None = None
         self._current_item: QueueItem | None = None
+        self._current_item_progress: float = 0.0
         self._queue_start_time: float = 0.0
         self._completed_count: int = 0
         self._total_in_batch: int = 0
@@ -700,6 +701,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             return
 
         self._current_item = item
+        self._current_item_progress = 0.0
         item.status = "compressing"
         if item.id in self.row_widgets:
             self.row_widgets[item.id].refresh()
@@ -755,6 +757,13 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             status = self._current_queue.get()
             self._handle_item_result(status)
         elif self._current_process and self._current_process.is_alive():
+            # Asymptotic smooth progress within current item's slice of the overall bar
+            self._current_item_progress = self._current_item_progress + (0.95 - self._current_item_progress) * 0.03
+            total = len(self.queue_items)
+            done = sum(1 for i in self.queue_items if i.status == "done")
+            if total > 0:
+                overall_fraction = (done + self._current_item_progress) / total
+                self.progress_bar.set(overall_fraction)
             self.after(100, self._check_current_process)
         else:
             # Process terminated without putting SUCCESS in queue
@@ -767,6 +776,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
         if result == "SUCCESS":
             item.status = "done"
+            self._current_item_progress = 1.0
             try:
                 item.compressed_size = os.path.getsize(item.output_path)
                 if item.original_size > 0:
