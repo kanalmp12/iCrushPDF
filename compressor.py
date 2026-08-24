@@ -959,11 +959,20 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         if errors > 0:
             msg += f", {errors} error(s)"
 
+        script = f'''
+        try
+            tell application id "com.icrushpdf.app" to display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"
+        on error
+            try
+                tell application "iCrushPDF" to display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"
+            on error
+                display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"
+            end try
+        end try
+        '''
+
         try:
-            subprocess.run([
-                "osascript", "-e",
-                f'display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"'
-            ], check=False)
+            subprocess.run(["osascript", "-e", script], check=False)
         except Exception as e:
             print("Notification error:", e)
 
