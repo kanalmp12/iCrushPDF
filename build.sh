@@ -38,4 +38,7 @@ plutil -replace CFBundleName -string "iCrushPDF" dist/iCrushPDF.app/Contents/Inf
 plutil -replace CFBundleDisplayName -string "iCrushPDF" dist/iCrushPDF.app/Contents/Info.plist
 plutil -replace NSHumanReadableCopyright -string "Copyright © 2026 iCrushPDF. All rights reserved." dist/iCrushPDF.app/Contents/Info.plist
 
+echo "Signing app bundle with updated Info.plist..."
+codesign --force --deep --sign - dist/iCrushPDF.app
+
 echo "Build complete! The app is located in the 'dist' folder with version $APP_VERSION."

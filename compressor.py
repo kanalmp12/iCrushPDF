@@ -999,20 +999,89 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             msg += f", {errors} error(s)"
 
         def _async_notify():
-            # Play crisp native completion sound
+            # 1. Play crisp native completion sound
             try:
                 subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"], capture_output=True, timeout=3)
             except Exception:
                 pass
 
-            # Display system notification banner
+            # 2. Try native Cocoa NSUserNotificationCenter with AppNotificationDelegate for app logo
+            delivered = False
             try:
-                subprocess.run([
-                    "osascript", "-e",
-                    f'display notification "{msg}" with title "iCrushPDF 💘"'
-                ], capture_output=True, timeout=5)
-            except Exception as e:
-                print("Notification error:", e)
+                objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+                foundation = ctypes.cdll.LoadLibrary(ctypes.util.find_library("Foundation"))
+
+                objc.objc_getClass.restype = ctypes.c_void_p
+                objc.objc_getClass.argtypes = [ctypes.c_char_p]
+                objc.sel_registerName.restype = ctypes.c_void_p
+                objc.sel_registerName.argtypes = [ctypes.c_char_p]
+                objc.objc_msgSend.restype = ctypes.c_void_p
+                objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+                objc.objc_allocateClassPair.restype = ctypes.c_void_p
+                objc.objc_allocateClassPair.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t]
+
+                objc.class_addMethod.restype = ctypes.c_bool
+                objc.class_addMethod.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+
+                objc.objc_registerClassPair.restype = None
+                objc.objc_registerClassPair.argtypes = [ctypes.c_void_p]
+
+                def _nsstring(s):
+                    cls = objc.objc_getClass(b"NSString")
+                    sel = objc.sel_registerName(b"stringWithUTF8String:")
+                    func = ctypes.cast(objc.objc_msgSend, ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p))
+                    return func(cls, sel, s.encode("utf-8"))
+
+                del_cls_name = b"AppNotificationDelegate"
+                existing_cls = objc.objc_getClass(del_cls_name)
+                if not existing_cls:
+                    NSObject = objc.objc_getClass(b"NSObject")
+                    delegate_cls = objc.objc_allocateClassPair(NSObject, del_cls_name, 0)
+
+                    @ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
+                    def should_present(self, _cmd, center, notif):
+                        return True
+
+                    App._notif_cb = should_present
+
+                    objc.class_addMethod(delegate_cls, objc.sel_registerName(b"userNotificationCenter:shouldPresentNotification:"), ctypes.cast(should_present, ctypes.c_void_p), b"c@:@@")
+                    objc.objc_registerClassPair(delegate_cls)
+                else:
+                    delegate_cls = existing_cls
+
+                del_alloc = objc.objc_msgSend(delegate_cls, objc.sel_registerName(b"alloc"))
+                del_obj = objc.objc_msgSend(del_alloc, objc.sel_registerName(b"init"))
+
+                center_cls = objc.objc_getClass(b"NSUserNotificationCenter")
+                center = objc.objc_msgSend(center_cls, objc.sel_registerName(b"defaultUserNotificationCenter"))
+
+                set_del_fn = ctypes.cast(objc.objc_msgSend, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p))
+                set_del_fn(center, objc.sel_registerName(b"setDelegate:"), del_obj)
+
+                notif_cls = objc.objc_getClass(b"NSUserNotification")
+                notif_alloc = objc.objc_msgSend(notif_cls, objc.sel_registerName(b"alloc"))
+                notif = objc.objc_msgSend(notif_alloc, objc.sel_registerName(b"init"))
+
+                set_val_fn = ctypes.cast(objc.objc_msgSend, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p))
+                set_val_fn(notif, objc.sel_registerName(b"setTitle:"), _nsstring("iCrushPDF 💘"))
+                set_val_fn(notif, objc.sel_registerName(b"setInformativeText:"), _nsstring(msg))
+
+                deliver_fn = ctypes.cast(objc.objc_msgSend, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p))
+                deliver_fn(center, objc.sel_registerName(b"deliverNotification:"), notif)
+                delivered = True
+            except Exception:
+                delivered = False
+
+            # 3. Fallback to osascript if Cocoa delivery fails
+            if not delivered:
+                try:
+                    subprocess.run([
+                        "osascript", "-e",
+                        f'display notification "{msg}" with title "iCrushPDF 💘"'
+                    ], capture_output=True, timeout=5)
+                except Exception as e:
+                    print("Notification error:", e)
 
         threading.Thread(target=_async_notify, daemon=True).start()
 
