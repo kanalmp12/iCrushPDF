@@ -8,6 +8,8 @@ import threading
 import uuid
 import time
 import json
+import ctypes
+import ctypes.util
 from dataclasses import dataclass
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
@@ -996,15 +998,49 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         if errors > 0:
             msg += f", {errors} error(s)"
 
-        script = f'display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"'
-
-        def _async_notify():
+        def _native_notify():
             try:
-                subprocess.run(["osascript", "-e", script], capture_output=True, timeout=5)
-            except Exception as e:
-                print("Notification error:", e)
+                objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+                foundation = ctypes.cdll.LoadLibrary(ctypes.util.find_library("Foundation"))
 
-        threading.Thread(target=_async_notify, daemon=True).start()
+                objc.objc_getClass.restype = ctypes.c_void_p
+                objc.objc_getClass.argtypes = [ctypes.c_char_p]
+                objc.sel_registerName.restype = ctypes.c_void_p
+                objc.sel_registerName.argtypes = [ctypes.c_char_p]
+                objc.objc_msgSend.restype = ctypes.c_void_p
+                objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+                def _nsstring(s):
+                    cls = objc.objc_getClass(b"NSString")
+                    sel = objc.sel_registerName(b"stringWithUTF8String:")
+                    func = ctypes.cast(objc.objc_msgSend, ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p))
+                    return func(cls, sel, s.encode("utf-8"))
+
+                notif_cls = objc.objc_getClass(b"NSUserNotification")
+                notif_alloc = objc.objc_msgSend(notif_cls, objc.sel_registerName(b"alloc"))
+                notif = objc.objc_msgSend(notif_alloc, objc.sel_registerName(b"init"))
+
+                set_val = ctypes.cast(objc.objc_msgSend, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p))
+                set_val(notif, objc.sel_registerName(b"setTitle:"), _nsstring("iCrushPDF 💘"))
+                set_val(notif, objc.sel_registerName(b"setInformativeText:"), _nsstring(msg))
+                set_val(notif, objc.sel_registerName(b"setSoundName:"), _nsstring("Glass"))
+
+                center_cls = objc.objc_getClass(b"NSUserNotificationCenter")
+                center = objc.objc_msgSend(center_cls, objc.sel_registerName(b"defaultUserNotificationCenter"))
+
+                deliver = ctypes.cast(objc.objc_msgSend, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p))
+                deliver(center, objc.sel_registerName(b"deliverNotification:"), notif)
+            except Exception as e:
+                # Fallback to osascript if Cocoa API encounters any issue
+                try:
+                    subprocess.run([
+                        "osascript", "-e",
+                        f'display notification "{msg}" with title "iCrushPDF 💘" sound name "Glass"'
+                    ], capture_output=True, timeout=5)
+                except Exception:
+                    pass
+
+        threading.Thread(target=_native_notify, daemon=True).start()
 
 
 if __name__ == "__main__":
