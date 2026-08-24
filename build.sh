@@ -29,7 +29,7 @@ pyinstaller --noconfirm \
             --clean \
             compressor.py
 
-APP_VERSION="1.1.1"
+APP_VERSION="1.2.0"
 echo "Injecting native macOS Info.plist metadata (Version $APP_VERSION)..."
 plutil -replace CFBundleShortVersionString -string "$APP_VERSION" dist/iCrushPDF.app/Contents/Info.plist
 plutil -replace CFBundleVersion -string "$APP_VERSION" dist/iCrushPDF.app/Contents/Info.plist
